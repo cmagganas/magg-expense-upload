@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Transaction Upload</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        .container {
+            max-width: 700px;
+            margin-top: 30px;
+        }
+        
+        .form-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .form-title {
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .password-section {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .password-section h5 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+        
+        .password-input {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        
+        .photo-upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background-color: #f8f9fa;
+        }
+        
+        .photo-upload-area:hover {
+            border-color: #007bff;
+            background-color: #e7f3ff;
+        }
+        
+        .photo-upload-area.has-file {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        
+        .file-info {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .validation-error {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+        
+        .field-valid {
+            border-color: #28a745 !important;
+        }
+        
+        .field-invalid {
+            border-color: #dc3545 !important;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 40px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            border-radius: 50px;
+            transition: transform 0.3s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .success-message, .error-message {
+            display: none;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .success-message {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .error-message {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .spinner-border {
+            width: 1.5rem;
+            height: 1.5rem;
+            margin-right: 10px;
+        }
+        
+        .required-star {
+            color: #dc3545;
+        }
+        
+        .form-locked {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            <h2 class="form-title">📊 Expense Transaction Upload</h2>
+            
+            <!-- Password Section -->
+            <div class="password-section" id="passwordSection">
+                <h5>🔐 Access Required</h5>
+                <p>Enter the access password to use this form:</p>
+                <div class="password-input">
+                    <input type="password" class="form-control" id="accessPassword" 
+                           placeholder="Enter password" onkeypress="if(event.key==='Enter') checkPassword()">
+                    <button class="btn btn-warning btn-sm mt-2" onclick="checkPassword()">Unlock Form</button>
+                </div>
+                <div id="passwordError" class="text-danger mt-2" style="display:none;">
+                    Incorrect password. Please try again.
+                </div>
+            </div>
+            
+            <form id="expenseForm" class="form-locked" novalidate>
+                <!-- Date and Check Number Row -->
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="transactionDate">
+                            Transaction Date <span class="required-star">*</span>
+                        </label>
+                        <input type="date" class="form-control" id="transactionDate" required>
+                        <div class="validation-error" id="dateError">Date must be within the last year</div>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="checkNumber">
+                            Check # / EFT / Deposit <span class="required-star">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="checkNumber" 
+                               placeholder="e.g., 1234, EFT, DEP" required>
+                        <div class="validation-error" id="checkError">This field is required</div>
+                    </div>
+                </div>
+                
+                <!-- Payee -->
+                <div class="form-group">
+                    <label for="payee">
+                        Payee <span class="required-star">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="payee" 
+                           placeholder="Who was paid or who paid you" required>
+                    <div class="validation-error" id="payeeError">Please enter a valid payee name</div>
+                </div>
+                
+                <!-- Memo -->
+                <div class="form-group">
+                    <label for="memo">
+                        Memo / Description <span class="required-star">*</span>
+                    </label>
+                    <textarea class="form-control" id="memo" rows="2" 
+                              placeholder="Brief description of the transaction" required></textarea>
+                    <div class="validation-error" id="memoError">Description is required</div>
+                </div>
+                
+                <!-- Category and Property Row -->
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="category">
+                            Category <span class="required-star">*</span>
+                        </label>
+                        <select class="form-control" id="category" required>
+                            <option value="">Select category...</option>
+                            <option value="Advertising">Advertising</option>
+                            <option value="Auto">Auto</option>
+                            <option value="Cleaning/Maintenance">Cleaning/Maintenance</option>
+                            <option value="Commissions">Commissions</option>
+                            <option value="Insurance">Insurance</option>
+                            <option value="Legal Fees">Legal Fees</option>
+                            <option value="Management Fees">Management Fees</option>
+                            <option value="Mortgage Interest">Mortgage Interest</option>
+                            <option value="Professional Fees">Professional Fees</option>
+                            <option value="Property Tax">Property Tax</option>
+                            <option value="Rental Income">Rental Income</option>
+                            <option value="Repairs">Repairs</option>
+                            <option value="Supplies">Supplies</option>
+                            <option value="Utilities">Utilities</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <div class="validation-error" id="categoryError">Please select a category</div>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="propertyTag">
+                            Property Tag <span class="required-star">*</span>
+                        </label>
+                        <select class="form-control" id="propertyTag" required>
+                            <option value="">Select property...</option>
+                            <option value="123 Main St">123 Main St</option>
+                            <option value="456 Oak Ave">456 Oak Ave</option>
+                            <option value="789 Pine Rd">789 Pine Rd</option>
+                            <option value="Corporate">Corporate/General</option>
+                        </select>
+                        <div class="validation-error" id="propertyError">Please select a property</div>
+                    </div>
+                </div>
+                
+                <!-- Amount -->
+                <div class="form-group">
+                    <label for="amount">
+                        Amount <span class="required-star">*</span>
+                    </label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">$</span>
+                        </div>
+                        <input type="number" class="form-control" id="amount" 
+                               step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="validation-error" id="amountError">Amount must be between $0.01 and $999,999.99</div>
+                </div>
+                
+                <!-- Photo Upload -->
+                <div class="form-group">
+                    <label>
+                        Receipt/Photo <span class="required-star">*</span>
+                    </label>
+                    <div class="photo-upload-area" onclick="document.getElementById('photoUpload').click()">
+                        <input type="file" id="photoUpload" accept="image/*,.pdf" 
+                               style="display: none;" required>
+                        <div id="uploadText">
+                            📷 Click to upload receipt<br>
+                            <small class="text-muted">JPEG, PNG, or PDF (max 10MB)</small>
+                        </div>
+                        <div class="file-info" id="fileInfo"></div>
+                    </div>
+                    <div class="validation-error" id="photoError">Please upload a valid receipt</div>
+                </div>
+                
+                <!-- Submit Button -->
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn submit-btn" id="submitBtn">
+                        Submit Transaction
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Success Message -->
+            <div class="success-message" id="successMessage">
+                <h5>✅ Transaction Submitted Successfully!</h5>
+                <p>Your expense has been recorded and the receipt has been saved.</p>
+                <button class="btn btn-success btn-sm" onclick="resetForm()">Submit Another</button>
+            </div>
+            
+            <!-- Error Message -->
+            <div class="error-message" id="errorMessage">
+                <h5>❌ Submission Failed</h5>
+                <p id="errorText">There was an error submitting your transaction. Please try again.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxfUNVeWBR9AmuYg-y0rDkj1hXnG1yqre06o_2poUdb3fJkHJ6WbXNyZBGKC5t2tmtpUQ/exec';
+        
+        let currentAccessToken = null;
+        
+        // Password check function
+        function checkPassword() {
+            const password = document.getElementById('accessPassword').value;
+            const errorDiv = document.getElementById('passwordError');
+            
+            if (password.trim() === '') {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'Please enter a password.';
+                return;
+            }
+            
+            // Store the password as the access token
+            currentAccessToken = password;
+            
+            // Hide password section and unlock form
+            document.getElementById('passwordSection').style.display = 'none';
+            document.getElementById('expenseForm').classList.remove('form-locked');
+            
+            // Clear the password input for security
+            document.getElementById('accessPassword').value = '';
+        }
+        
+        // File handling
+        document.getElementById('photoUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const uploadArea = document.querySelector('.photo-upload-area');
+            const fileInfo = document.getElementById('fileInfo');
+            
+            if (file) {
+                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                fileInfo.innerHTML = `📎 ${file.name} (${sizeMB} MB)`;
+                uploadArea.classList.add('has-file');
+                document.getElementById('uploadText').style.display = 'none';
+                validatePhoto();
+            } else {
+                fileInfo.innerHTML = '';
+                uploadArea.classList.remove('has-file');
+                document.getElementById('uploadText').style.display = 'block';
+            }
+        });
+        
+        // Validation functions
+        function validateDate() {
+            const input = document.getElementById('transactionDate');
+            const error = document.getElementById('dateError');
+            const value = input.value;
+            
+            if (!value) {
+                showError(input, error, 'Date is required');
+                return false;
+            }
+            
+            const date = new Date(value);
+            const today = new Date();
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(today.getFullYear() - 1);
+            
+            if (date > today || date < oneYearAgo) {
+                showError(input, error, 'Date must be within the last year');
+                return false;
+            }
+            
+            clearError(input, error);
+            return true;
+        }
+        
+        function validateAmount() {
+            const input = document.getElementById('amount');
+            const error = document.getElementById('amountError');
+            const value = parseFloat(input.value);
+            
+            if (!value || isNaN(value)) {
+                showError(input, error, 'Amount is required');
+                return false;
+            }
+            
+            if (value <= 0 || value >= 1000000) {
+                showError(input, error, 'Amount must be between $0.01 and $999,999.99');
+                return false;
+            }
+            
+            clearError(input, error);
+            return true;
+        }
+        
+        function validatePhoto() {
+            const input = document.getElementById('photoUpload');
+            const error = document.getElementById('photoError');
+            const file = input.files[0];
+            
+            if (!file) {
+                showError(null, error, 'Receipt upload is required');
+                return false;
+            }
+            
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            if (file.size > maxSize) {
+                showError(null, error, 'File size must be under 10MB');
+                return false;
+            }
+            
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+            if (!allowedTypes.includes(file.type)) {
+                showError(null, error, 'File must be JPEG, PNG, or PDF');
+                return false;
+            }
+            
+            clearError(null, error);
+            return true;
+        }
+        
+        function validateRequired(fieldId, errorId, message) {
+            const input = document.getElementById(fieldId);
+            const error = document.getElementById(errorId);
+            
+            if (!input.value.trim()) {
+                showError(input, error, message);
+                return false;
+            }
+            
+            clearError(input, error);
+            return true;
+        }
+        
+        function showError(input, error, message) {
+            if (input) input.classList.add('field-invalid');
+            error.textContent = message;
+            error.style.display = 'block';
+        }
+        
+        function clearError(input, error) {
+            if (input) {
+                input.classList.remove('field-invalid');
+                input.classList.add('field-valid');
+            }
+            error.style.display = 'none';
+        }
+        
+        // Real-time validation
+        document.getElementById('transactionDate').addEventListener('change', validateDate);
+        document.getElementById('amount').addEventListener('input', validateAmount);
+        document.getElementById('checkNumber').addEventListener('input', () => 
+            validateRequired('checkNumber', 'checkError', 'This field is required'));
+        document.getElementById('payee').addEventListener('input', () => 
+            validateRequired('payee', 'payeeError', 'Payee is required'));
+        document.getElementById('memo').addEventListener('input', () => 
+            validateRequired('memo', 'memoError', 'Description is required'));
+        document.getElementById('category').addEventListener('change', () => 
+            validateRequired('category', 'categoryError', 'Please select a category'));
+        document.getElementById('propertyTag').addEventListener('change', () => 
+            validateRequired('propertyTag', 'propertyError', 'Please select a property'));
+        
+        // Convert file to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+            });
+        }
+        
+        // Form submission
+        document.getElementById('expenseForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Check if user has entered password
+            if (!currentAccessToken) {
+                alert('Please enter the access password first.');
+                return;
+            }
+            
+            // Validate all fields
+            const validations = [
+                validateDate(),
+                validateRequired('checkNumber', 'checkError', 'This field is required'),
+                validateRequired('payee', 'payeeError', 'Payee is required'),
+                validateRequired('memo', 'memoError', 'Description is required'),
+                validateRequired('category', 'categoryError', 'Please select a category'),
+                validateRequired('propertyTag', 'propertyError', 'Please select a property'),
+                validateAmount(),
+                validatePhoto()
+            ];
+            
+            if (!validations.every(v => v)) {
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>Submitting...';
+            
+            try {
+                // Prepare form data
+                const formData = {
+                    accessToken: currentAccessToken, // Use the entered password as token
+                    date: document.getElementById('transactionDate').value,
+                    checkNumber: document.getElementById('checkNumber').value,
+                    payee: document.getElementById('payee').value,
+                    memo: document.getElementById('memo').value,
+                    category: document.getElementById('category').value,
+                    propertyTag: document.getElementById('propertyTag').value,
+                    amount: parseFloat(document.getElementById('amount').value).toFixed(2)
+                };
+                
+                // Handle photo
+                const photoFile = document.getElementById('photoUpload').files[0];
+                if (photoFile) {
+                    formData.photoData = await fileToBase64(photoFile);
+                    formData.photoType = photoFile.type;
+                    formData.photoName = photoFile.name;
+                }
+                
+                // Submit to Google Apps Script
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify(formData)
+                });
+                
+                // Show success message
+                showSuccess();
+                
+            } catch (error) {
+                console.error('Submission error:', error);
+                showErrorMessage('Network error: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Submit Transaction';
+            }
+        });
+        
+        function showSuccess() {
+            document.getElementById('expenseForm').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            window.scrollTo(0, 0);
+        }
+        
+        function showErrorMessage(message) {
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('errorText').textContent = message || 'There was an error submitting your transaction.';
+            window.scrollTo(0, 0);
+        }
+        
+        function resetForm() {
+            // Reset to password prompt
+            document.getElementById('passwordSection').style.display = 'block';
+            document.getElementById('expenseForm').classList.add('form-locked');
+            document.getElementById('expenseForm').style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            currentAccessToken = null;
+            
+            // Clear form
+            document.getElementById('expenseForm').reset();
+            
+            // Reset file upload area
+            document.querySelector('.photo-upload-area').classList.remove('has-file');
+            document.getElementById('uploadText').style.display = 'block';
+            document.getElementById('fileInfo').innerHTML = '';
+            
+            // Clear validation states
+            document.querySelectorAll('.field-valid, .field-invalid').forEach(el => {
+                el.classList.remove('field-valid', 'field-invalid');
+            });
+            document.querySelectorAll('.validation-error').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            window.scrollTo(0, 0);
+        }
+        
+        // Auto-format amount field
+        document.getElementById('amount').addEventListener('blur', function() {
+            if (this.value) {
+                this.value = parseFloat(this.value).toFixed(2);
+            }
+        });
+    </script>
+</body>
+</html>
