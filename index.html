@@ -284,13 +284,13 @@
                 <!-- Photo Upload -->
                 <div class="form-group">
                     <label>
-                        Receipt/Photo <span class="required-star">*</span>
+                        Receipt/Photo <small class="text-muted">(optional)</small>
                     </label>
                     <div class="photo-upload-area" onclick="document.getElementById('photoUpload').click()">
                         <input type="file" id="photoUpload" accept="image/*,.pdf" 
-                               style="display: none;" required>
+                               style="display: none;">
                         <div id="uploadText">
-                            📷 Click to upload receipt<br>
+                            📷 Click to upload receipt (optional)<br>
                             <small class="text-muted">JPEG, PNG, or PDF (max 10MB)</small>
                         </div>
                         <div class="file-info" id="fileInfo"></div>
@@ -475,7 +475,7 @@
                 fileInfo.innerHTML = `📎 ${file.name} (${sizeMB} MB)`;
                 uploadArea.classList.add('has-file');
                 document.getElementById('uploadText').style.display = 'none';
-                validatePhoto();
+                // validatePhoto(); - now optional
             } else {
                 fileInfo.innerHTML = '';
                 uploadArea.classList.remove('has-file');
@@ -622,8 +622,8 @@
                 validateRequired('memo', 'memoError', 'Description is required'),
                 validateRequired('category', 'categoryError', 'Please select a category'),
                 validateRequired('propertyTag', 'propertyError', 'Please select a property'),
-                validateAmount(),
-                validatePhoto()
+                validateAmount()
+                // validatePhoto() - now optional
             ];
             
             if (!validations.every(v => v)) {
