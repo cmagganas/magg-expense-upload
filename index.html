@@ -327,12 +327,7 @@
         // ============================================
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxfUNVeWBR9AmuYg-y0rDkj1hXnG1yqre06o_2poUdb3fJkHJ6WbXNyZBGKC5t2tmtpUQ/exec';
         
-        // User credentials - in production, this would be server-side
-        const VALID_USERS = {
-            'john': { password: 'john123', displayName: 'John' },
-            'mary': { password: 'mary123', displayName: 'Mary' },
-            'chris': { password: 'chris123', displayName: 'Chris' }
-        };
+        // All user validation happens server-side
         
         let currentUser = null;
         
@@ -363,11 +358,12 @@
             }
         }
         
-        function login() {
+        async function login() {
             const username = document.getElementById('username').value.trim().toLowerCase();
             const password = document.getElementById('password').value;
             const rememberMe = document.getElementById('rememberMe').checked;
             const errorDiv = document.getElementById('loginError');
+            const loginBtn = document.querySelector('#loginSection button');
             
             if (!username || !password) {
                 errorDiv.style.display = 'block';
@@ -375,36 +371,62 @@
                 return;
             }
             
-            if (!VALID_USERS[username] || VALID_USERS[username].password !== password) {
+            // Username validation will happen server-side
+            
+            // Show loading state
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = 'Validating...';
+            errorDiv.style.display = 'none';
+            
+            try {
+                // Validate credentials with server
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        action: 'login',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                // Note: With no-cors, we can't read the response, so we'll assume success
+                // if no error is thrown. The actual validation happens server-side during form submission.
+                
+                // Successful login assumption (server validation will happen during form submit)
+                currentUser = {
+                    username: username,
+                    password: password, // Keep for form submission
+                    displayName: username.charAt(0).toUpperCase() + username.slice(1),
+                    loginTime: new Date().toISOString()
+                };
+                
+                // Store in session
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                // Store in localStorage if remember me is checked
+                if (rememberMe) {
+                    const expiry = new Date().getTime() + (7 * 24 * 60 * 60 * 1000); // 7 days
+                    localStorage.setItem('rememberedUser', JSON.stringify(currentUser));
+                    localStorage.setItem('rememberExpiry', expiry.toString());
+                }
+                
+                showWelcomeMessage();
+                unlockForm();
+                
+                // Clear inputs
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('rememberMe').checked = false;
+                
+            } catch (error) {
+                console.error('Login error:', error);
                 errorDiv.style.display = 'block';
-                errorDiv.textContent = 'Invalid username or password.';
-                return;
+                errorDiv.textContent = 'Login failed. Please check your credentials.';
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = 'Login';
             }
-            
-            // Successful login
-            currentUser = {
-                username: username,
-                displayName: VALID_USERS[username].displayName,
-                loginTime: new Date().toISOString()
-            };
-            
-            // Store in session
-            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-            
-            // Store in localStorage if remember me is checked
-            if (rememberMe) {
-                const expiry = new Date().getTime() + (7 * 24 * 60 * 60 * 1000); // 7 days
-                localStorage.setItem('rememberedUser', JSON.stringify(currentUser));
-                localStorage.setItem('rememberExpiry', expiry.toString());
-            }
-            
-            showWelcomeMessage();
-            unlockForm();
-            
-            // Clear inputs
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-            document.getElementById('rememberMe').checked = false;
         }
         
         function logout() {
@@ -616,6 +638,7 @@
                 // Prepare form data
                 const formData = {
                     username: currentUser.username,
+                    password: currentUser.password,
                     displayName: currentUser.displayName,
                     date: document.getElementById('transactionDate').value,
                     checkNumber: document.getElementById('checkNumber').value,
