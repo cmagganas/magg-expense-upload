@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expense Transaction Upload</title>
+    <!-- iOS and PWA optimizations -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Expense Tracker">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23007bff'/><text y='70' x='50' text-anchor='middle' font-size='60' fill='white'>💰</text></svg>">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -152,17 +157,31 @@
         <div class="form-card">
             <h2 class="form-title">📊 Expense Transaction Upload</h2>
             
-            <!-- Password Section -->
-            <div class="password-section" id="passwordSection">
-                <h5>🔐 Access Required</h5>
-                <p>Enter the access password to use this form:</p>
+            <!-- Login Section -->
+            <div class="password-section" id="loginSection">
+                <h5>🔐 User Login</h5>
+                <p>Enter your credentials to access the expense form:</p>
                 <div class="password-input">
-                    <input type="password" class="form-control" id="accessPassword" 
-                           placeholder="Enter password" onkeypress="if(event.key==='Enter') checkPassword()">
-                    <button class="btn btn-warning btn-sm mt-2" onclick="checkPassword()">Unlock Form</button>
+                    <input type="text" class="form-control mb-2" id="username" 
+                           placeholder="Username" autocomplete="username" 
+                           onkeypress="if(event.key==='Enter') document.getElementById('password').focus()">
+                    <input type="password" class="form-control mb-2" id="password" 
+                           placeholder="Password" autocomplete="current-password"
+                           onkeypress="if(event.key==='Enter') login()">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="rememberMe">
+                        <label class="form-check-label" for="rememberMe">
+                            Remember me for 7 days
+                        </label>
+                    </div>
+                    <button class="btn btn-warning btn-sm mt-2" onclick="login()">Login</button>
+                    <button class="btn btn-outline-secondary btn-sm mt-2 ml-2" onclick="logout()" id="logoutBtn" style="display:none;">Logout</button>
                 </div>
-                <div id="passwordError" class="text-danger mt-2" style="display:none;">
-                    Incorrect password. Please try again.
+                <div id="loginError" class="text-danger mt-2" style="display:none;">
+                    Invalid username or password. Please try again.
+                </div>
+                <div id="welcomeMessage" class="text-success mt-2" style="display:none;">
+                    Welcome back! <span id="welcomeUser"></span>
                 </div>
             </div>
             
@@ -308,28 +327,119 @@
         // ============================================
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxfUNVeWBR9AmuYg-y0rDkj1hXnG1yqre06o_2poUdb3fJkHJ6WbXNyZBGKC5t2tmtpUQ/exec';
         
-        let currentAccessToken = null;
+        // User credentials - in production, this would be server-side
+        const VALID_USERS = {
+            'john': { password: 'john123', displayName: 'John' },
+            'mary': { password: 'mary123', displayName: 'Mary' },
+            'chris': { password: 'chris123', displayName: 'Chris' }
+        };
         
-        // Password check function
-        function checkPassword() {
-            const password = document.getElementById('accessPassword').value;
-            const errorDiv = document.getElementById('passwordError');
+        let currentUser = null;
+        
+        // Check for saved session on page load
+        window.addEventListener('load', function() {
+            checkSavedSession();
+        });
+        
+        function checkSavedSession() {
+            // Check localStorage for remember me
+            const savedUser = localStorage.getItem('rememberedUser');
+            const savedExpiry = localStorage.getItem('rememberExpiry');
             
-            if (password.trim() === '') {
-                errorDiv.style.display = 'block';
-                errorDiv.textContent = 'Please enter a password.';
+            if (savedUser && savedExpiry && new Date().getTime() < parseInt(savedExpiry)) {
+                currentUser = JSON.parse(savedUser);
+                showWelcomeMessage();
+                unlockForm();
                 return;
             }
             
-            // Store the password as the access token
-            currentAccessToken = password;
+            // Check sessionStorage for current session
+            const sessionUser = sessionStorage.getItem('currentUser');
+            if (sessionUser) {
+                currentUser = JSON.parse(sessionUser);
+                showWelcomeMessage();
+                unlockForm();
+                return;
+            }
+        }
+        
+        function login() {
+            const username = document.getElementById('username').value.trim().toLowerCase();
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            const errorDiv = document.getElementById('loginError');
             
-            // Hide password section and unlock form
-            document.getElementById('passwordSection').style.display = 'none';
+            if (!username || !password) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'Please enter both username and password.';
+                return;
+            }
+            
+            if (!VALID_USERS[username] || VALID_USERS[username].password !== password) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'Invalid username or password.';
+                return;
+            }
+            
+            // Successful login
+            currentUser = {
+                username: username,
+                displayName: VALID_USERS[username].displayName,
+                loginTime: new Date().toISOString()
+            };
+            
+            // Store in session
+            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            // Store in localStorage if remember me is checked
+            if (rememberMe) {
+                const expiry = new Date().getTime() + (7 * 24 * 60 * 60 * 1000); // 7 days
+                localStorage.setItem('rememberedUser', JSON.stringify(currentUser));
+                localStorage.setItem('rememberExpiry', expiry.toString());
+            }
+            
+            showWelcomeMessage();
+            unlockForm();
+            
+            // Clear inputs
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('rememberMe').checked = false;
+        }
+        
+        function logout() {
+            currentUser = null;
+            sessionStorage.removeItem('currentUser');
+            localStorage.removeItem('rememberedUser');
+            localStorage.removeItem('rememberExpiry');
+            
+            // Show login section and lock form
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('expenseForm').classList.add('form-locked');
+            document.getElementById('welcomeMessage').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('loginError').style.display = 'none';
+            
+            // Reset form
+            resetForm();
+        }
+        
+        function showWelcomeMessage() {
+            const welcomeDiv = document.getElementById('welcomeMessage');
+            const welcomeUser = document.getElementById('welcomeUser');
+            const logoutBtn = document.getElementById('logoutBtn');
+            
+            welcomeUser.textContent = currentUser.displayName;
+            welcomeDiv.style.display = 'block';
+            logoutBtn.style.display = 'inline-block';
+            
+            // Hide login error
+            document.getElementById('loginError').style.display = 'none';
+        }
+        
+        function unlockForm() {
+            document.getElementById('loginSection').style.display = 'none';
             document.getElementById('expenseForm').classList.remove('form-locked');
-            
-            // Clear the password input for security
-            document.getElementById('accessPassword').value = '';
         }
         
         // File handling
@@ -476,9 +586,9 @@
         document.getElementById('expenseForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Check if user has entered password
-            if (!currentAccessToken) {
-                alert('Please enter the access password first.');
+            // Check if user is logged in
+            if (!currentUser) {
+                alert('Please log in first.');
                 return;
             }
             
@@ -505,7 +615,8 @@
             try {
                 // Prepare form data
                 const formData = {
-                    accessToken: currentAccessToken, // Use the entered password as token
+                    username: currentUser.username,
+                    displayName: currentUser.displayName,
                     date: document.getElementById('transactionDate').value,
                     checkNumber: document.getElementById('checkNumber').value,
                     payee: document.getElementById('payee').value,
@@ -556,13 +667,14 @@
         }
         
         function resetForm() {
-            // Reset to password prompt
-            document.getElementById('passwordSection').style.display = 'block';
-            document.getElementById('expenseForm').classList.add('form-locked');
+            // Only show login if user is not logged in
+            if (!currentUser) {
+                document.getElementById('loginSection').style.display = 'block';
+                document.getElementById('expenseForm').classList.add('form-locked');
+            }
             document.getElementById('expenseForm').style.display = 'block';
             document.getElementById('successMessage').style.display = 'none';
             document.getElementById('errorMessage').style.display = 'none';
-            currentAccessToken = null;
             
             // Clear form
             document.getElementById('expenseForm').reset();
